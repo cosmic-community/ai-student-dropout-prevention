@@ -145,6 +145,7 @@ export interface StudentFormData {
   }[];
   financial_status?: 'Stable' | 'Moderate Stress' | 'High Stress';
   part_time_job?: boolean;
+  current_risk_level?: RiskLevel; // Added this field to match what's being sent
 }
 
 export interface RiskPredictionData {
