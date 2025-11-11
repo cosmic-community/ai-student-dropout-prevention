@@ -7,6 +7,7 @@ import { StudentFormData, Counselor } from '@/types'
 export default function StudentForm({ counselors }: { counselors: Counselor[] }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string>('')
   const [formData, setFormData] = useState<StudentFormData>({
     title: '',
     email: '',
@@ -57,6 +58,7 @@ export default function StudentForm({ counselors }: { counselors: Counselor[] })
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError('')
     
     try {
       // Calculate average subject performance
@@ -66,6 +68,7 @@ export default function StudentForm({ counselors }: { counselors: Counselor[] })
         : 0
 
       // Step 1: Predict risk
+      console.log('Step 1: Predicting risk...')
       const predictionResponse = await fetch('/api/predict-risk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -80,12 +83,15 @@ export default function StudentForm({ counselors }: { counselors: Counselor[] })
       })
       
       if (!predictionResponse.ok) {
-        throw new Error('Failed to predict risk')
+        const errorData = await predictionResponse.json()
+        throw new Error(errorData.error || 'Failed to predict risk')
       }
       
       const prediction = await predictionResponse.json()
+      console.log('Prediction successful:', prediction)
       
       // Step 2: Create student record
+      console.log('Step 2: Creating student record...')
       const studentData = {
         ...formData,
         subjects: validSubjects,
@@ -99,11 +105,13 @@ export default function StudentForm({ counselors }: { counselors: Counselor[] })
       })
       
       if (!studentResponse.ok) {
-        throw new Error('Failed to create student')
+        const errorData = await studentResponse.json()
+        throw new Error(errorData.error || 'Failed to create student')
       }
       
       const studentResult = await studentResponse.json()
       const studentId = studentResult.student.id
+      console.log('Student created successfully:', studentId)
       
       // Step 3: Assign counselor based on risk level and availability
       let assignedCounselorId = null
@@ -115,9 +123,11 @@ export default function StudentForm({ counselors }: { counselors: Counselor[] })
           return currLoad < prevLoad ? curr : prev
         })
         assignedCounselorId = availableCounselor.id
+        console.log('Assigned counselor:', assignedCounselorId)
       }
       
       // Step 4: Create risk assessment
+      console.log('Step 3: Creating risk assessment...')
       const assessmentResponse = await fetch('/api/create-assessment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -129,8 +139,13 @@ export default function StudentForm({ counselors }: { counselors: Counselor[] })
       })
       
       if (!assessmentResponse.ok) {
-        throw new Error('Failed to create assessment')
+        const errorData = await assessmentResponse.json()
+        console.error('Assessment creation error:', errorData)
+        throw new Error(errorData.error || 'Failed to create assessment')
       }
+      
+      const assessmentResult = await assessmentResponse.json()
+      console.log('Assessment created successfully:', assessmentResult)
       
       // Success! Redirect to dashboard
       alert(`Student added successfully! Risk Level: ${prediction.risk_level}`)
@@ -138,7 +153,9 @@ export default function StudentForm({ counselors }: { counselors: Counselor[] })
       
     } catch (error) {
       console.error('Error creating student assessment:', error)
-      alert('Failed to create student assessment. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create student assessment. Please try again.'
+      setError(errorMessage)
+      alert(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -150,6 +167,12 @@ export default function StudentForm({ counselors }: { counselors: Counselor[] })
         <h2 className="text-2xl font-bold text-gray-900">Student Information</h2>
         <p className="text-gray-600 mt-1">Enter student details for risk assessment</p>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
       
       <div className="grid md:grid-cols-2 gap-6">
         <div>
