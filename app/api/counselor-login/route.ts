@@ -13,18 +13,35 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find counselor by email
-    const response = await cosmic.objects
-      .find({ type: 'counselors' })
-      .props(['id', 'title', 'slug', 'metadata'])
-      .depth(0)
+    // Find counselor by email with proper error handling
+    let counselors: Counselor[] = []
+    
+    try {
+      const response = await cosmic.objects
+        .find({ type: 'counselors' })
+        .props(['id', 'title', 'slug', 'metadata'])
+        .depth(0)
+      
+      counselors = response.objects as Counselor[]
+    } catch (cosmicError: any) {
+      // Handle 404 (no counselors found) or other Cosmic errors
+      console.error('Cosmic query error:', cosmicError)
+      if (cosmicError.status === 404) {
+        return NextResponse.json(
+          { error: 'No counselors found in the system' },
+          { status: 404 }
+        )
+      }
+      throw cosmicError
+    }
 
-    const counselors = response.objects as Counselor[]
+    // Find counselor with matching email
     const counselor = counselors.find(
-      (c) => c.metadata?.email?.toLowerCase() === email.toLowerCase()
+      (c) => c.metadata?.email?.toLowerCase().trim() === email.toLowerCase().trim()
     )
 
     if (!counselor) {
+      console.log('Available counselor emails:', counselors.map(c => c.metadata?.email))
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
@@ -52,7 +69,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error during counselor login:', error)
     return NextResponse.json(
-      { error: 'Login failed' },
+      { error: 'Login failed. Please try again.' },
       { status: 500 }
     )
   }

@@ -36,7 +36,8 @@ export default function CounselorLoginPage() {
       // Successful login - redirect to counselor dashboard
       router.push(`/counselor/dashboard?counselorId=${data.counselor.id}`)
     } catch (err) {
-      setError('An error occurred during login')
+      console.error('Login error:', err)
+      setError('An error occurred during login. Please try again.')
       setLoading(false)
     }
   }
@@ -80,7 +81,9 @@ export default function CounselorLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
               />
+              <p className="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
             </div>
             
             <div className="flex items-center justify-between">
@@ -101,6 +104,12 @@ export default function CounselorLoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+          
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded">
+            <p className="text-sm text-blue-800">
+              <strong>Demo Login:</strong> Use any counselor email from your Cosmic CMS with any password (min 6 characters)
+            </p>
+          </div>
         </div>
         
         <div className="text-center mt-6">
