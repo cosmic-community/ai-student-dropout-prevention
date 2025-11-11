@@ -36,8 +36,12 @@ export default function StudentForm({ counselors }: { counselors: Counselor[] })
   
   const handleSubjectChange = (index: number, field: string, value: string | number) => {
     const updatedSubjects = [...subjects];
+    // Changed: Ensure all properties are explicitly defined to prevent undefined values
+    const currentSubject = updatedSubjects[index];
     updatedSubjects[index] = {
-      ...updatedSubjects[index],
+      name: currentSubject?.name ?? '',
+      marks: currentSubject?.marks ?? 0,
+      grade: currentSubject?.grade ?? '',
       [field]: value
     };
     setSubjects(updatedSubjects);
