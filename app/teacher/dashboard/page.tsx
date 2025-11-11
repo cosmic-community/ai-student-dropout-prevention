@@ -4,12 +4,12 @@ import { Student, RiskAssessment } from '@/types'
 import StudentList from '@/components/StudentList'
 
 export default async function TeacherDashboardPage() {
-  const students = await safeCosmicCall<Student>(() =>
-    cosmic.objects.find({ type: 'students' }).props(['id', 'title', 'slug', 'metadata']).depth(1)
+  const students = await safeCosmicCall<Student>(async () =>
+    await cosmic.objects.find({ type: 'students' }).props(['id', 'title', 'slug', 'metadata']).depth(1)
   );
   
-  const assessments = await safeCosmicCall<RiskAssessment>(() =>
-    cosmic.objects.find({ type: 'risk-assessments' }).props(['id', 'title', 'metadata']).depth(1)
+  const assessments = await safeCosmicCall<RiskAssessment>(async () =>
+    await cosmic.objects.find({ type: 'risk-assessments' }).props(['id', 'title', 'metadata']).depth(1)
   );
   
   const highRiskCount = assessments.filter(a => 

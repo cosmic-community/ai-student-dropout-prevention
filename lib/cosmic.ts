@@ -11,7 +11,7 @@ function hasStatus(error: unknown): error is { status: number } {
   return typeof error === 'object' && error !== null && 'status' in error;
 }
 
-// Helper function for safe API calls
+// Helper function for safe API calls - now expects async callback
 export async function safeCosmicCall<T>(
   apiCall: () => Promise<{ objects: T[] }>
 ): Promise<T[]> {

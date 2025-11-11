@@ -20,7 +20,7 @@ export default function StudentForm({ counselors }: { counselors: Counselor[] })
     part_time_job: false,
   });
   
-  const [subjects, setSubjects] = useState([
+  const [subjects, setSubjects] = useState<Array<{ name: string; marks: number; grade: string }>>([
     { name: '', marks: 0, grade: '' }
   ]);
   
@@ -75,7 +75,7 @@ export default function StudentForm({ counselors }: { counselors: Counselor[] })
       // Create student with risk assessment
       const studentData = {
         ...formData,
-        subjects: subjects.filter(s => s.name && s.marks)
+        subjects: subjects.filter(s => s.name && s.marks && s.grade)
       };
       
       // In production, create student and assessment via API

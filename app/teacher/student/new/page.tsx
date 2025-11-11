@@ -4,8 +4,8 @@ import { Counselor } from '@/types'
 import Link from 'next/link'
 
 export default async function NewStudentPage() {
-  const counselors = await safeCosmicCall<Counselor>(() =>
-    cosmic.objects.find({ type: 'counselors' }).props(['id', 'title', 'slug', 'metadata'])
+  const counselors = await safeCosmicCall<Counselor>(async () =>
+    await cosmic.objects.find({ type: 'counselors' }).props(['id', 'title', 'slug', 'metadata'])
   );
   
   return (

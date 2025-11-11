@@ -12,18 +12,18 @@ export default async function StudentDashboardPage() {
   let recommendations: Recommendation[] = [];
   
   try {
-    const assessments = await safeCosmicCall<RiskAssessment>(() =>
-      cosmic.objects.find({
+    const assessments = await safeCosmicCall<RiskAssessment>(async () =>
+      await cosmic.objects.find({
         type: 'risk-assessments',
         'metadata.student': studentId
       }).props(['id', 'title', 'slug', 'metadata']).depth(1)
     );
     
     if (assessments.length > 0) {
-      assessment = assessments[0];
+      assessment = assessments[0] || null;
       
-      recommendations = await safeCosmicCall<Recommendation>(() =>
-        cosmic.objects.find({
+      recommendations = await safeCosmicCall<Recommendation>(async () =>
+        await cosmic.objects.find({
           type: 'recommendations',
           'metadata.risk_assessment': assessment!.id
         }).props(['id', 'title', 'slug', 'metadata']).depth(1)
