@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation'
 import { StudentFormData, Counselor } from '@/types'
 
 export default function StudentForm({ counselors }: { counselors: Counselor[] }) {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState<StudentFormData>({
     title: '',
     email: '',
@@ -18,49 +18,54 @@ export default function StudentForm({ counselors }: { counselors: Counselor[] })
     subjects: [],
     financial_status: 'Stable',
     part_time_job: false,
-  });
+  })
   
   const [subjects, setSubjects] = useState<Array<{ name: string; marks: number; grade: string }>>([
     { name: '', marks: 0, grade: '' }
-  ]);
+  ])
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    const inputValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+    const { name, value, type } = e.target
+    const inputValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     
     setFormData(prev => ({
       ...prev,
       [name]: type === 'number' ? parseFloat(value) : inputValue
-    }));
-  };
+    }))
+  }
   
   const handleSubjectChange = (index: number, field: string, value: string | number) => {
-    const updatedSubjects = [...subjects];
-    // Changed: Ensure all properties are explicitly defined to prevent undefined values
-    const currentSubject = updatedSubjects[index];
+    const updatedSubjects = [...subjects]
+    const currentSubject = updatedSubjects[index]
     updatedSubjects[index] = {
       name: currentSubject?.name ?? '',
       marks: currentSubject?.marks ?? 0,
       grade: currentSubject?.grade ?? '',
       [field]: value
-    };
-    setSubjects(updatedSubjects);
-  };
+    }
+    setSubjects(updatedSubjects)
+  }
   
   const addSubject = () => {
-    setSubjects([...subjects, { name: '', marks: 0, grade: '' }]);
-  };
+    setSubjects([...subjects, { name: '', marks: 0, grade: '' }])
+  }
   
   const removeSubject = (index: number) => {
-    setSubjects(subjects.filter((_, i) => i !== index));
-  };
+    setSubjects(subjects.filter((_, i) => i !== index))
+  }
   
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault()
+    setLoading(true)
     
     try {
-      // Predict risk
+      // Calculate average subject performance
+      const validSubjects = subjects.filter(s => s.name && s.marks)
+      const subjectPerformance = validSubjects.length > 0
+        ? validSubjects.reduce((sum, s) => sum + s.marks, 0) / validSubjects.length
+        : 0
+
+      // Step 1: Predict risk
       const predictionResponse = await fetch('/api/predict-risk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -70,31 +75,74 @@ export default function StudentForm({ counselors }: { counselors: Counselor[] })
           semester: formData.semester,
           financial_status: formData.financial_status,
           part_time_job: formData.part_time_job,
-          subject_performance: subjects.reduce((sum, s) => sum + s.marks, 0) / subjects.length
+          subject_performance: subjectPerformance
         })
-      });
+      })
       
-      const prediction = await predictionResponse.json();
+      if (!predictionResponse.ok) {
+        throw new Error('Failed to predict risk')
+      }
       
-      // Create student with risk assessment
+      const prediction = await predictionResponse.json()
+      
+      // Step 2: Create student record
       const studentData = {
         ...formData,
-        subjects: subjects.filter(s => s.name && s.marks && s.grade)
-      };
+        subjects: validSubjects,
+        current_risk_level: prediction.risk_level
+      }
       
-      // In production, create student and assessment via API
-      console.log('Student data:', studentData);
-      console.log('Prediction:', prediction);
+      const studentResponse = await fetch('/api/create-student', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(studentData)
+      })
       
-      // Redirect to recommendations page
-      router.push(`/teacher/dashboard`);
+      if (!studentResponse.ok) {
+        throw new Error('Failed to create student')
+      }
+      
+      const studentResult = await studentResponse.json()
+      const studentId = studentResult.student.id
+      
+      // Step 3: Assign counselor based on risk level and availability
+      let assignedCounselorId = null
+      if (counselors && counselors.length > 0) {
+        // Find counselor with lowest current load
+        const availableCounselor = counselors.reduce((prev, curr) => {
+          const prevLoad = prev.metadata?.current_students || 0
+          const currLoad = curr.metadata?.current_students || 0
+          return currLoad < prevLoad ? curr : prev
+        })
+        assignedCounselorId = availableCounselor.id
+      }
+      
+      // Step 4: Create risk assessment
+      const assessmentResponse = await fetch('/api/create-assessment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: studentId,
+          prediction: prediction,
+          counselorId: assignedCounselorId
+        })
+      })
+      
+      if (!assessmentResponse.ok) {
+        throw new Error('Failed to create assessment')
+      }
+      
+      // Success! Redirect to dashboard
+      alert(`Student added successfully! Risk Level: ${prediction.risk_level}`)
+      router.push('/teacher/dashboard')
+      
     } catch (error) {
-      console.error('Error creating student:', error);
-      alert('Failed to create student assessment');
+      console.error('Error creating student assessment:', error)
+      alert('Failed to create student assessment. Please try again.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
   
   return (
     <form onSubmit={handleSubmit} className="card space-y-6">
